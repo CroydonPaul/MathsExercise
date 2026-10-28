@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" name="viewport" content="width=device-width,initial-scale=1">
+  <title>Converting Numbers Into Words</title>
+  <link rel="stylesheet" type="text/css" href="mt.css">
+  <!-- <script type="module" src="./natToWords.js"></script> -->
+</head>
+
+<body>
+  <h1 id="hdrMain">Converting Numbers Into Words</h1>
+
+  <label id="lblRange" for="selectRange">Range:</label>
+  <select id="selectRange">
+    <option value="999">Hundreds</option>
+    <option value="999999" selected>Thousands</option>
+    <option value="999999999">Millions</option>
+    <option value="999999999999">Billions</option>
+  </select>
+
+  <div id="divQuestion" style="display:none;">
+    <label id="lblQuestion">Question: What is ???? in words?</label>
+
+  </div>
+
+  <div class="formfield">
+    <label for="txtAnswer">Answer:</label><span>&nbsp;&nbsp;</span>
+    <textarea class="answer" id="txtAnswer" rows="4" cols="80" wrap="on" maxlength="2048" name="txtAnswer">
+    </textarea>
+    <button id="btnEnter">Enter</button>
+  </div>
+
+  <div>
+    <p id="lblMark" style="display:none;"></p>
+  </div>
+
+  <div>
+    <button id="btnSayAnswer">Say Answer</button>
+  </div>
+
+  <div class="formfield">
+    <button id="btnShowAnswer" style="display:none;" for="lblShownAnswer">Show Answer</button>
+    <p id="lblShownAnswer" style="display:none;"></p>
+  </div>
+
+  <div>
+    <button id="btnNextQuestion" style="display:none;">Next Question</button>
+  </div>
+
+
+  <div>
+    <label id="lblScore"></label>
+  </div>
+
+  <div>
+    <label id="lblStatus"></label>
+  </div>
+
+  <script src="./natToWords.js"></script>
+  <script type="text/javascript">
+
+    var globalMute = false;
+    var globalLow = 0;
+    var globalHigh = 999999999999;
+    var globalNum = 0;
+    var globalNumAsWords_comma_seperated = "";
+    var globalNumAsWords = "";
+    var globalCorrect = 0;
+    var globalAnswerCount = 0;
+
+    function randomNatural(low, high) {
+      const diff = high - low;
+      const rand = Math.floor(Math.random() * (1 + diff));
+      return low + rand;
+    }
+    /*async*/ function speakText(text) {
+      //if (globalMute)
+      //  return true;
+      const audio = new SpeechSynthesisUtterance(text);
+      audio.rate = 0.5;  // 1 = normal, 0.5 = slower, 2 = faster
+      audio.pitch = 1.5; // 0 = low, 2 = high
+      audio.volume = 1; // 0 = mute, 1 = full volume)
+      window.speechSynthesis.speak(audio);
+
+      //return new Promise(resolve => {
+      //  audio.onend = resolve;
+      //});
+    }
+    /*async*/ function askQuestion() {
+      globalNum = randomNatural(globalLow, globalHigh);
+      globalNumAsWords_comma_seperated = natToWords(globalNum);
+      globalNumAsWords = globalNumAsWords_comma_seperated.replaceAll(",", "");
+      const num_delimited = globalNum.toLocaleString();
+      const strQuestion = "Question: What is " + num_delimited + " in words?";
+      const eLblQuestion = document.getElementById("lblQuestion");
+      eLblQuestion.innerText = strQuestion;
+
+      let lblMark = document.getElementById("lblMark");
+      lblMark.innerText = "";
+      lblMark.style.display = "none";
+
+      let txtAnswer = document.getElementById("txtAnswer");
+      txtAnswer.value = "";
+      document.getElementById("divQuestion").style.display = "block";
+      txtAnswer.focus();
+      document.getElementById("btnEnter").disabled = false;
+      document.getElementById("btnNextQuestion").style.display = "none";
+
+      document.getElementById("lblShownAnswer").innerText = "";
+
+      //speakText(strQuestion);
+    }
+    /*async*/ function askFirstQuestion() {
+      const eHdrMain = document.getElementById("hdrMain");
+      const text = eHdrMain.innerText;
+      /*await*/ speakText("Welcome, This is an exercise for, " + text);
+
+      /*await*/ /*speakText(",,Starting, gently, with numbers between " + globalLow + " and " + globalHigh);*/
+      askQuestion();
+      /*await*/ speakText("What is this, number, in words?");
+    }
+    function stringSameness(s1, s2) {
+      let a1 = s1.split(' ');
+      let a2 = s2.split(' ');
+      let same = 0;
+      let e1 = a1.length;
+      let e2 = a2.length;
+      let max_len = Math.max(e1, e2);
+      while (e1 > 0 && e2 > 0) {
+        if (a1[e1 - 1] == a2[e2 - 1]) {
+          --e1; --e2; ++same;
+        } else {
+          break;
+        }
+      }
+      let i1 = 0;
+      let i2 = 0;
+      while (i1 < e1 && i2 < e2) {
+        if (a1[i1] == a2[i2]) {
+          ++i1; ++i2; ++same;
+        } else {
+          break;
+        }
+      }
+      if (max_len == 0)
+        max_len = 1;
+      return same / max_len;
+    }
+    function TidyAnswer(answer) {
+      let tidy_answer = answer.replaceAll("\n", " ");
+      tidy_answer = tidy_answer.replaceAll("-", " ");
+      tidy_answer = tidy_answer.replaceAll(",", " ");
+      tidy_answer = tidy_answer.replaceAll(" & ", " and ");
+      do {
+        answer = tidy_answer;
+        tidy_answer = answer.replaceAll("  ", " ").trim();
+      } while (tidy_answer != answer);
+      tidy_answer = tidy_answer.toLowerCase();
+      return tidy_answer;
+    }
+    function Hint(tidy_answer, raw_answer, num_as_words) {
+      const is_minus = raw_answer.indexOf("-") != -1;
+      if (is_minus)
+        return " HINT: don't use '-' because it can be confused with minus";
+
+      const has_a = tidy_answer.indexOf("a ") == 0 || tidy_answer.indexOf(" a ") != -1;
+      if (has_a)
+        return " HINT: use 'one' instead of 'a'";
+
+      const is_forty_misspelt = ((tidy_answer.indexOf("fourty") !== -1) && (num_as_words.indexOf("forty") !== -1));
+      if (is_forty_misspelt)
+        return " HINT: 'fourty' should be 'forty'";
+
+      return "";
+    }
+    function UnrecognizedMsg(tidy_answer_minus_and) {
+      const unrecognised_words = UnrecognizedNumberWords(tidy_answer_minus_and.split(' '));
+      if (unrecognised_words.length == 0)
+        return "";
+      const unrecognized_comma_seperated = unrecognised_words.join(", ");
+      return "; Unrecognised words: " + unrecognized_comma_seperated;
+
+    }
+    function DisplayMark(mark_text, is_correct) {
+      const lblMark = document.getElementById("lblMark");
+      lblMark.innerText = mark_text;
+      lblMark.style.color = is_correct ? "#007700" : "#770000";
+      lblMark.style.display = "block";
+      speakText(mark_text);
+    }
+    function RespondToCorrectAnswer(is_exact_answer) {
+      const mark_text = is_exact_answer ? "Correct, well done." : "Correct, but I use the word, 'and', differently.";
+      DisplayMark(mark_text, true);
+
+      ++globalCorrect;
+      //document.getElementById("btnEnter").disabled = true;
+      document.getElementById("btnNextQuestion").style.display = "block";
+      document.getElementById("btnNextQuestion").focus();
+      if (is_exact_answer) {
+        document.getElementById("lblShownAnswer").style.display = "none";
+      } else {
+        document.getElementById("lblShownAnswer").innerText = "Answer: " + globalNumAsWords;
+        document.getElementById("lblShownAnswer").style.display = "block";
+        document.getElementById("btnShowAnswer").style.display = "none";
+        speakText(globalNumAsWords);
+      }
+    }
+    function RespondToIncorrectAnswer(tidy_answer, raw_answer, tidy_answer_minus_and, num_as_words_minus_and) {
+      const hint = Hint(tidy_answer, raw_answer, globalNumAsWords);
+      const unrecognised_msg = UnrecognizedMsg(tidy_answer_minus_and);
+
+      const sameness1 = Math.floor(stringSameness(tidy_answer, globalNumAsWords) * 100);
+      const sameness2 = Math.floor(stringSameness(tidy_answer_minus_and, num_as_words_minus_and) * 100);
+      const sameness = Math.min(sameness1, sameness2);
+      const closeness = (sameness < 50) ? "Incorrect" : ((sameness < 66) ? "Half right" : "Nearly");
+      const mark_text = closeness + /*" (" + sameness + ")" + */ ". Try again." + hint + unrecognised_msg;
+      DisplayMark(mark_text, false);
+
+      const shown_answer = document.getElementById("lblShownAnswer").innerText;
+      if (shown_answer == "")
+        document.getElementById("btnShowAnswer").style.display = "block";
+
+      const txtAnswer = document.getElementById("txtAnswer");
+      txtAnswer.focus();
+    }
+
+    function checkAnswer() {
+      const txtAnswer = document.getElementById("txtAnswer");
+      const raw_answer = txtAnswer.value;
+      const tidy_answer = TidyAnswer(raw_answer);
+      const is_exact_answer = (tidy_answer == globalNumAsWords);
+      const tidy_answer_minus_and = tidy_answer.replaceAll(" and ", " ");
+      const num_as_words_minus_and = globalNumAsWords.replaceAll(" and ", " ");
+      const is_ok_modulo_and = (tidy_answer_minus_and == num_as_words_minus_and);
+      if (is_exact_answer || is_ok_modulo_and) {
+        RespondToCorrectAnswer(is_exact_answer);
+      } else {
+        RespondToIncorrectAnswer(tidy_answer, raw_answer, tidy_answer_minus_and, num_as_words_minus_and);
+      }
+
+      ++globalAnswerCount;
+      const lblScore = document.getElementById("lblScore");
+      lblScore.innerText = "Total Score: " + globalCorrect + "/" + globalAnswerCount + " correct";
+    }
+    function sayAnswer() {
+      //speakText(globalNumAsWords);
+      speakText(globalNumAsWords_comma_seperated);
+    }
+    function showAnswer() {
+      document.getElementById("lblShownAnswer").style.display = "block";
+      document.getElementById("lblShownAnswer").innerText = "Answer: " + globalNumAsWords_comma_seperated;
+      document.getElementById("btnShowAnswer").style.display = "none";
+      let txtAnswer = document.getElementById("txtAnswer");
+      txtAnswer.focus();
+    }
+    function changeRange() {
+      globalHigh = parseInt(document.getElementById("selectRange").value, 10);
+    }
+    function addEvent(e, n, f) {
+      //if (e.addEventListener) {
+      e.addEventListener(n, f, false);
+      //}
+      //e.attachEvent ? e.attachEvent("on" + n, f) : e.addEventListener(n, f, 0);
+    }
+
+    window.onload = function () {
+      changeRange();
+      askFirstQuestion();
+      addEvent(document.getElementById("selectRange"), "change", function () { changeRange(); });
+      //const btnEnter = document.getElementById("btnEnter");
+      addEvent(document.getElementById("btnEnter"), "click", function () { checkAnswer(); });
+      addEvent(document.getElementById("btnNextQuestion"), "click", function () { askQuestion(); });
+      addEvent(document.getElementById("btnSayAnswer"), "click", function () { sayAnswer(); });
+      addEvent(document.getElementById("btnShowAnswer"), "click", function () { showAnswer(); });
+    };
+  </script>
+</body>
+
+</html>
