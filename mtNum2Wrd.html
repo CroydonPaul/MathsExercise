@@ -11,54 +11,60 @@
 <body>
   <h1 id="hdrMain">Converting Numbers Into Words</h1>
 
-  <label id="lblRange" for="selectRange">Range:</label>
-  <select id="selectRange">
-    <option value="999">Hundreds</option>
-    <option value="999999" selected>Thousands</option>
-    <option value="999999999">Millions</option>
-    <option value="999999999999">Billions</option>
-  </select>
-
+  <br>
+  <br>
   <div id="divQuestion" style="display:none;">
     <label id="lblQuestion">Question: What is ???? in words?</label>
 
   </div>
 
+  <br>
   <div class="formfield">
-    <label for="txtAnswer">Answer:</label><span>&nbsp;&nbsp;</span>
+    <label for="txtAnswer">Type Your Answer:</label><span>&nbsp;&nbsp;</span>
     <textarea class="answer" id="txtAnswer" rows="4" cols="80" wrap="on" maxlength="2048" name="txtAnswer">
     </textarea>
-    <button id="btnEnter">Enter</button>
+    <button id="btnCheckYourAnswer">Check Your Answer</button>
   </div>
 
+  <br>
   <div>
     <p id="lblMark" style="display:none;"></p>
   </div>
 
+  <br>
   <div>
-    <button id="btnSayAnswer">Say Answer</button>
+    <button id="btnSayAnswer">Say Correct Answer</button>
   </div>
 
+  <br>
   <div class="formfield">
-    <button id="btnShowAnswer" style="display:none;" for="lblShownAnswer">Show Answer</button>
+    <button id="btnShowAnswer" style="display:none;" for="lblShownAnswer">Show Correct Answer</button>
     <p id="lblShownAnswer" style="display:none;"></p>
   </div>
 
-  <div>
+  <br>
+  <div id="divRangeNextQuestion">
+  	<div class="formfield">
+      <label id="lblNumberRange" for="selectRange">Choose Number Range:&nbsp;</label>
+      <select id="selectRange" >
+        <option value="999">Hundreds</option>
+        <option value="999999" selected>Thousands</option>
+        <option value="999999999">Millions</option>
+        <option value="999999999999">Billions</option>
+      </select>
+    </div>
     <button id="btnNextQuestion" style="display:none;">Next Question</button>
   </div>
 
 
+  <br>
   <div>
     <label id="lblScore"></label>
   </div>
 
-  <div>
-    <label id="lblStatus"></label>
-  </div>
-
   <script src="./natToWords.js"></script>
   <script type="text/javascript">
+	"use strict"
 
     var globalMute = false;
     var globalLow = 0;
@@ -104,7 +110,7 @@
       txtAnswer.value = "";
       document.getElementById("divQuestion").style.display = "block";
       txtAnswer.focus();
-      document.getElementById("btnEnter").disabled = false;
+      document.getElementById("btnCheckYourAnswer").disabled = false;
       document.getElementById("btnNextQuestion").style.display = "none";
 
       document.getElementById("lblShownAnswer").innerText = "";
@@ -160,13 +166,13 @@
       return tidy_answer;
     }
     function Hint(tidy_answer, raw_answer, num_as_words) {
-      const is_minus = raw_answer.indexOf("-") != -1;
-      if (is_minus)
-        return " HINT: don't use '-' because it can be confused with minus";
+      const contains_minus = raw_answer.indexOf("-") != -1;
+      if (contains_minus)
+        return " HINT: don't use the dash - symbol because it can be confused with minus.";
 
       const has_a = tidy_answer.indexOf("a ") == 0 || tidy_answer.indexOf(" a ") != -1;
       if (has_a)
-        return " HINT: use 'one' instead of 'a'";
+        return " HINT: use 'one' instead of 'a'.";
 
       const is_forty_misspelt = ((tidy_answer.indexOf("fourty") !== -1) && (num_as_words.indexOf("forty") !== -1));
       if (is_forty_misspelt)
@@ -178,8 +184,9 @@
       const unrecognised_words = UnrecognizedNumberWords(tidy_answer_minus_and.split(' '));
       if (unrecognised_words.length == 0)
         return "";
+      const word_or_words = (unrecognised_words.length == 1) ? "word" : "words";
       const unrecognized_comma_seperated = unrecognised_words.join(", ");
-      return "; Unrecognised words: " + unrecognized_comma_seperated;
+      return " Unrecognised " + word_or_words + ": " + unrecognized_comma_seperated;
 
     }
     function DisplayMark(mark_text, is_correct) {
@@ -194,7 +201,7 @@
       DisplayMark(mark_text, true);
 
       ++globalCorrect;
-      //document.getElementById("btnEnter").disabled = true;
+      //document.getElementById("btnCheckYourAnswer").disabled = true;
       document.getElementById("btnNextQuestion").style.display = "block";
       document.getElementById("btnNextQuestion").focus();
       if (is_exact_answer) {
@@ -228,12 +235,13 @@
     function checkAnswer() {
       const txtAnswer = document.getElementById("txtAnswer");
       const raw_answer = txtAnswer.value;
+	  const contains_minus = raw_answer.indexOf("-") != -1;
       const tidy_answer = TidyAnswer(raw_answer);
       const is_exact_answer = (tidy_answer == globalNumAsWords);
       const tidy_answer_minus_and = tidy_answer.replaceAll(" and ", " ");
       const num_as_words_minus_and = globalNumAsWords.replaceAll(" and ", " ");
       const is_ok_modulo_and = (tidy_answer_minus_and == num_as_words_minus_and);
-      if (is_exact_answer || is_ok_modulo_and) {
+      if ( ! contains_minus && (is_exact_answer || is_ok_modulo_and)) {
         RespondToCorrectAnswer(is_exact_answer);
       } else {
         RespondToIncorrectAnswer(tidy_answer, raw_answer, tidy_answer_minus_and, num_as_words_minus_and);
@@ -257,19 +265,19 @@
     function changeRange() {
       globalHigh = parseInt(document.getElementById("selectRange").value, 10);
     }
-    function addEvent(e, n, f) {
-      //if (e.addEventListener) {
-      e.addEventListener(n, f, false);
+    function addEvent(elem, event_name, fun) {
+      //if (elem.addEventListener) {
+      elem.addEventListener(event_name, fun, false);
       //}
-      //e.attachEvent ? e.attachEvent("on" + n, f) : e.addEventListener(n, f, 0);
+      //elem.attachEvent ? elem.attachEvent("on" + event_name, fun) : elem.addEventListener(event_name, fun, 0);
     }
 
     window.onload = function () {
       changeRange();
       askFirstQuestion();
       addEvent(document.getElementById("selectRange"), "change", function () { changeRange(); });
-      //const btnEnter = document.getElementById("btnEnter");
-      addEvent(document.getElementById("btnEnter"), "click", function () { checkAnswer(); });
+      //const btnCheckYourAnswer = document.getElementById("btnCheckYourAnswer");
+      addEvent(document.getElementById("btnCheckYourAnswer"), "click", function () { checkAnswer(); });
       addEvent(document.getElementById("btnNextQuestion"), "click", function () { askQuestion(); });
       addEvent(document.getElementById("btnSayAnswer"), "click", function () { sayAnswer(); });
       addEvent(document.getElementById("btnShowAnswer"), "click", function () { showAnswer(); });
